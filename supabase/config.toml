@@ -1,0 +1,26 @@
+# Supabase 로컬 개발 설정 (supabase start 시 사용).
+project_id = "trend-explorer"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[functions.yt-connector]
+verify_jwt = false
+
+[functions.analysis-worker]
+verify_jwt = false
+
+[functions.aggregate]
+verify_jwt = false

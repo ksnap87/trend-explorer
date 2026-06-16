@@ -1,0 +1,12 @@
+# Netlify — Next.js 대시보드 (apps/web)
+[build]
+  base = "apps/web"
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# 환경 변수(Netlify UI 또는 CLI 에서 설정):
+#   NEXT_PUBLIC_SUPABASE_URL
+#   NEXT_PUBLIC_SUPABASE_ANON_KEY

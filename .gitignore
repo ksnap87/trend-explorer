@@ -1,0 +1,19 @@
+# dependencies
+node_modules/
+
+# next
+apps/web/.next/
+apps/web/out/
+
+# env
+.env
+.env.local
+.env*.local
+
+# supabase
+supabase/.branches/
+supabase/.temp/
+
+# misc
+.DS_Store
+*.log
