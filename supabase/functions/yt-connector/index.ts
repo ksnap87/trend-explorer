@@ -94,7 +94,7 @@ Deno.serve(async () => {
         if (post.media.length > 0) {
           await db.from("media").upsert(
             post.media.map((m) => ({ post_id: row.id, ...m })),
-            { onConflict: "id", ignoreDuplicates: true },
+            { onConflict: "post_id,source_url", ignoreDuplicates: true },
           );
         }
 

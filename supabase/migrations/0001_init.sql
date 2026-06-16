@@ -93,7 +93,9 @@ create table if not exists media (
   source_url   text not null,
   storage_path text,                            -- Supabase Storage 캐시본 (선택)
   width        int,
-  height       int
+  height       int,
+  -- 커넥터 재실행 시 같은 미디어가 중복 insert 되지 않도록 자연키 unique.
+  unique (post_id, source_url)
 );
 create index if not exists media_post_idx on media (post_id);
 
