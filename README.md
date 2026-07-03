@@ -79,6 +79,57 @@ npm install
 npm run dev
 ```
 
+## 원격 배포 (프로덕션 프로비저닝)
+
+MCP 없이 Supabase CLI만으로 라이브 슬라이스를 세운다. `SUPABASE_ACCESS_TOKEN`(대시보드 →
+Account → Access Tokens)과 프로젝트 ref가 필요하다.
+
+```bash
+# 0) CLI 로그인 + 프로젝트 연결 (없으면 supabase projects create 로 생성)
+supabase login                                  # 또는 export SUPABASE_ACCESS_TOKEN=...
+supabase link --project-ref <PROJECT_REF>
+
+# 1) 스키마 적용: 0001_init.sql → 0002_aggregate.sql 순서로 원격 DB에 push
+supabase db push
+
+# 2) 시드 (seed.sql 은 db push 대상이 아니므로 명시적으로 실행)
+#    - 방법 A: 대시보드 SQL Editor 에 supabase/seed.sql 내용을 붙여넣어 실행 (가장 간단)
+#    - 방법 B: 연결 문자열(Settings → Database → Connection string)로 psql 실행
+psql "<CONNECTION_STRING>" -f supabase/seed.sql
+
+# 3) Edge Function 시크릿 등록 (서버 전용 키)
+supabase secrets set \
+  YOUTUBE_API_KEY=<...> \
+  ANTHROPIC_API_KEY=<...>
+#   SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY 는 배포된 함수에 자동 주입됨
+
+# 4) Edge Functions 배포
+supabase functions deploy yt-connector
+supabase functions deploy analysis-worker
+supabase functions deploy aggregate
+
+# 5) 파이프라인 1회 통과 (수집 → 분석 → 집계)
+supabase functions invoke yt-connector      # raw_posts/media 적재 + analysis_jobs enqueue
+supabase functions invoke analysis-worker   # post_analysis 채움 (BATCH_SIZE=5, 필요 시 반복)
+supabase functions invoke aggregate         # trend_aggregates day/week 롤업
+```
+
+집계 함수가 `rebuild_trend_aggregates(window, window_start)` 를 호출하는지 확인하고, 값이
+비어 있으면 `select rebuild_trend_aggregates('week', date_trunc('week', now())::date);` 로
+직접 실행해 sanity check 한다.
+
+### 대시보드 (Netlify)
+
+```bash
+# anon 키 확인 (URL 은 https://<PROJECT_REF>.supabase.co)
+supabase projects api-keys --project-ref <PROJECT_REF>
+```
+
+Netlify 사이트 환경변수에 아래를 설정하고 `apps/web` 을 배포한다:
+- `NEXT_PUBLIC_SUPABASE_URL` = `https://<PROJECT_REF>.supabase.co`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` = 위에서 확인한 `anon` 키 anon 키는 RLS read-only 정책(`trend_aggregates`, `tags_dim`,
+`raw_posts`, `media`)으로만 접근하므로 클라이언트 노출이 안전하다.
+
 ## 검증 (end-to-end)
 
 1. 마이그레이션 적용 후 `supabase` 테이블 목록에 모델 테이블이 존재
